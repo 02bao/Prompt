@@ -32,7 +32,8 @@
     </main>
 
     <script>
-      const API = window.API_BASE || 'http://localhost:8080';
+    // Production backend (Render) provided by user
+    const API = window.API_BASE || 'https://prompt-q9c2.onrender.com';
       let mode = 'login'; // or 'signup'
 
   const form = document.getElementById('login-form');
