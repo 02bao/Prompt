@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Login Demo</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1 id="form-title">Đăng nhập</h1>
+      <form id="login-form">
+        <label>
+          Người dùng
+          <input type="text" id="username" name="username" required />
+        </label>
+        <label>
+          Mật khẩu
+          <input type="password" id="password" name="password" required />
+        </label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button type="submit" id="submit-btn">Đăng nhập</button>
+          <button type="button" id="toggle-btn" style="background:#eee;color:#333;padding:8px;border-radius:8px;border:0;cursor:pointer">Chuyển sang Đăng ký</button>
+        </div>
+        <p id="message" class="message"></p>
+      </form>
+      <hr />
+      <div>
+        <button id="show-users" style="margin-top:8px;">Xem người dùng</button>
+        <div id="users" style="margin-top:12px"></div>
+      </div>
+    </main>
+
+    <script>
+      const API = window.API_BASE || 'http://localhost:8080';
+      let mode = 'login'; // or 'signup'
+
+  const form = document.getElementById('login-form');
+  const msg = document.getElementById('message');
+  const title = document.getElementById('form-title');
+  const submitBtn = document.getElementById('submit-btn');
+  const toggleBtn = document.getElementById('toggle-btn');
+  const showUsersBtn = document.getElementById('show-users');
+
+      // hide users button until admin logged in
+      showUsersBtn.style.display = 'none';
+      // if role already in localStorage (from previous login), show accordingly
+      if (localStorage.getItem('role') === 'ADMIN') {
+        showUsersBtn.style.display = '';
+      }
+
+      toggleBtn.addEventListener('click', () => {
+        mode = mode === 'login' ? 'signup' : 'login';
+        title.textContent = mode === 'login' ? 'Đăng nhập' : 'Đăng ký';
+        submitBtn.textContent = mode === 'login' ? 'Đăng nhập' : 'Đăng ký';
+        toggleBtn.textContent = mode === 'login' ? 'Chuyển sang Đăng ký' : 'Chuyển sang Đăng nhập';
+        msg.textContent = '';
+      });
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        msg.textContent = '';
+        try {
+          const path = mode === 'login' ? '/api/login' : '/api/signup';
+          const res = await fetch(API + path, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password }),
+          });
+          const data = await res.json();
+          if (res.ok) {
+            if (mode === 'login') {
+              msg.textContent = 'Đăng nhập thành công';
+              msg.style.color = 'green';
+              if (data.token) localStorage.setItem('token', data.token);
+              if (data.role && data.role.toUpperCase() === 'ADMIN') {
+                localStorage.setItem('role', 'ADMIN');
+                showUsersBtn.style.display = '';
+              } else {
+                localStorage.removeItem('role');
+                showUsersBtn.style.display = 'none';
+              }
+            } else {
+              msg.textContent = 'Đăng ký thành công — bạn có thể đăng nhập bây giờ';
+              msg.style.color = 'green';
+              // switch to login mode automatically
+              mode = 'login';
+              title.textContent = 'Đăng nhập';
+              submitBtn.textContent = 'Đăng nhập';
+              toggleBtn.textContent = 'Chuyển sang Đăng ký';
+            }
+          } else {
+            msg.textContent = data.error || (mode === 'login' ? 'Lỗi đăng nhập' : 'Lỗi đăng ký');
+            msg.style.color = 'red';
+          }
+        } catch (err) {
+          msg.textContent = 'Không kết nối được tới server';
+          msg.style.color = 'red';
+        }
+      });
+
+    document.getElementById('show-users').addEventListener('click', async () => {
+        const usersDiv = document.getElementById('users');
+        usersDiv.textContent = 'Đang tải...';
+        try {
+      const token = localStorage.getItem('token');
+      const headers = token ? { 'Authorization': token } : {};
+      const res = await fetch(API + '/api/users-protected', { headers });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          const users = await res.json();
+          if (users.length === 0) {
+            usersDiv.textContent = 'Chưa có người dùng.';
+            return;
+          }
+          const table = document.createElement('table');
+          table.style.width = '100%';
+          table.style.borderCollapse = 'collapse';
+          table.innerHTML = '<tr><th style="text-align:left">ID</th><th style="text-align:left">Username</th></tr>' +
+            users.map(u => `<tr><td style="padding:6px;border-top:1px solid #eee">${u.id}</td><td style="padding:6px;border-top:1px solid #eee">${u.username}</td></tr>`).join('');
+          usersDiv.innerHTML = '';
+          usersDiv.appendChild(table);
+        } catch (err) {
+          usersDiv.textContent = 'Không tải được dữ liệu: ' + err;
+        }
+      });
+    </script>
+  </body>
+</html>
