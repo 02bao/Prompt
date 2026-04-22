@@ -34,6 +34,15 @@
     <script>
     // Production backend (Render) provided by user
     const API = window.API_BASE || 'https://prompt-q9c2.onrender.com';
+
+    // Debug helpers: log script load and uncaught errors to help diagnose missing requests
+    console.log('[frontend] script loaded, API=', API);
+    window.addEventListener('error', (e) => {
+      console.error('[frontend] uncaught error', e.error || e.message, e);
+    });
+    window.addEventListener('unhandledrejection', (e) => {
+      console.error('[frontend] unhandled rejection', e.reason);
+    });
       let mode = 'login'; // or 'signup'
 
   const form = document.getElementById('login-form');
@@ -50,26 +59,30 @@
         showUsersBtn.style.display = '';
       }
 
-      toggleBtn.addEventListener('click', () => {
+  toggleBtn.addEventListener('click', () => {
         mode = mode === 'login' ? 'signup' : 'login';
         title.textContent = mode === 'login' ? 'Đăng nhập' : 'Đăng ký';
         submitBtn.textContent = mode === 'login' ? 'Đăng nhập' : 'Đăng ký';
         toggleBtn.textContent = mode === 'login' ? 'Chuyển sang Đăng ký' : 'Chuyển sang Đăng nhập';
         msg.textContent = '';
       });
-
+      // Log when form submit handler is attached and when it's invoked
+      console.log('[frontend] attaching submit handler to form');
       form.addEventListener('submit', async (e) => {
+        console.log('[frontend] submit handler called, mode=', mode);
         e.preventDefault();
         const username = document.getElementById('username').value;
         const password = document.getElementById('password').value;
         msg.textContent = '';
         try {
           const path = mode === 'login' ? '/api/login' : '/api/signup';
+          console.log('[frontend] about to fetch', API + path, { username });
           const res = await fetch(API + path, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password }),
           });
+          console.log('[frontend] fetch completed, status=', res.status);
           const data = await res.json();
           if (res.ok) {
             if (mode === 'login') {
@@ -103,12 +116,14 @@
       });
 
     document.getElementById('show-users').addEventListener('click', async () => {
+      console.log('[frontend] show-users clicked');
         const usersDiv = document.getElementById('users');
         usersDiv.textContent = 'Đang tải...';
         try {
       const token = localStorage.getItem('token');
       const headers = token ? { 'Authorization': token } : {};
-  const res = await fetch(API + '/api/users', { headers });
+      console.log('[frontend] fetching users from', API + '/api/users', 'headers=', headers);
+      const res = await fetch(API + '/api/users', { headers });
           if (!res.ok) throw new Error('HTTP ' + res.status);
           const users = await res.json();
           if (users.length === 0) {
