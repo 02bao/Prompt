@@ -108,7 +108,7 @@
         try {
       const token = localStorage.getItem('token');
       const headers = token ? { 'Authorization': token } : {};
-      const res = await fetch(API + '/api/users-protected', { headers });
+  const res = await fetch(API + '/api/users', { headers });
           if (!res.ok) throw new Error('HTTP ' + res.status);
           const users = await res.json();
           if (users.length === 0) {
